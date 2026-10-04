@@ -66,6 +66,11 @@ a:hover { color: var(--brand-dark); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .site-header { background: #0f2747; } }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .site-name { font-size: 1.25rem; font-weight: 700; }
+.header-buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn-lang { background: #fff; color: var(--brand); border-color: #fff; }
+.btn-lang:hover { background: var(--brand-soft); color: var(--brand-dark); }
+.lang-note { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.95rem; }
+.en-text { display: block; color: var(--muted); font-size: 0.85rem; font-style: italic; margin-top: 2px; }
 .site-tagline { font-size: 0.9rem; opacity: 0.92; }
 
 .site-footer { margin-top: 48px; padding: 24px 0 40px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }

@@ -11,6 +11,8 @@ The person answers simple questions. The site then makes:
 
 Papers download as a **PDF ready to print** and as a **Word file** for editing.
 
+**English and Spanish:** the questions, screens, and instructions are available in **English and Spanish**. A button at the top switches between them. The **papers to be filed are always produced in English**, whichever language the person used. In Spanish, the Review screen shows every sentence of their papers in Spanish, with the exact English wording underneath, so the person understands what they are signing. The instructions PDF is in Spanish too.
+
 **Privacy:** there is no server and no database. Everything happens in the person's own browser, and nothing they type is sent anywhere. Answers are saved only on their device, and they can erase them at any time.
 
 ---
@@ -24,6 +26,7 @@ You only do this once.
 3. Under **"Branch"**, click the drop-down and choose **`claude/affectionate-franklin-3ii7dw`**. Next to it, leave **`/ (root)`**. Click **Save**.
 4. Wait 1–3 minutes, then refresh the page. A box will appear at the top: **"Your site is live at https://alexandra724.github.io/RR/"**.
 5. Click the link. That is your website. Share that link with anyone who needs it.
+6. **To share a link that opens directly in Spanish,** add `?lang=es` to the end: **https://alexandra724.github.io/RR/?lang=es**. Otherwise the site opens in Spanish automatically when the person's phone or computer is set to Spanish. Anyone can switch languages with the button at the top.
 
 > **Tip:** Later you can merge this branch into `main` (GitHub will offer a green "Compare & pull request" button) and pick `main` in step 3 instead. Either works.
 
@@ -49,7 +52,7 @@ Everything you are likely to change is in **one file: `settings.js`**.
 
 In `settings.js` you can change:
 
-- The site name and tagline.
+- The site name and tagline. Lines ending in `Es` (like `taglineEs`) are the Spanish version shown on the Spanish site.
 - "Provided by" and your contact phone, email, and website.
 - The **ICE mailing address**, the **CBP email addresses**, and the CRS address. Update these if DHS changes them.
 - The "last reviewed" date and all the help links.
@@ -82,7 +85,11 @@ The opposition text follows the two pro se model briefs: **Template A** for §§
 | Deadlines are counted from the date on the notice. | **On or after 6/27/2025:** 15 business days, skipping weekends and federal holidays. **Before 6/27/2025:** 30 days. **§ 1815:** 30 days. **Bills:** CBP 10 days, CRS 30 days, debt collector 30 days. Users are told to file even if the deadline has passed. |
 | Signature and date lines are left blank for wet-ink signing. | — |
 
+**Spanish translation:** the Spanish wording was written for this tool in plain, respectful Spanish (usted form). Before launch, have a native Spanish speaker on your team read through it, especially the Spanish meanings of the facts and defenses on the Review screen. The Spanish text is shown on screen only; it never goes into the filed papers. In Spanish mode, the questions where people type their own words ask them to write in English if they can, or to get help from someone they trust. The translator question is framed for Spanish users ("your papers will be in English"), so they know to use the Certificate of Translation.
+
 **To change the legal text:** all wording for the documents and instructions is in **`js/case.js`**. The brief is in `buildOpposition`, the cover letters in `buildCoverLetter`, the facts sentences in `departureFacts` / `entryFacts` / `lifeFacts`, and the instructions in `nextSteps`. The questions themselves are in **`js/app.js`**.
+
+**To change any wording on the screens:** every message is written side by side as `T("English text", "Texto en español")`. Change the half you want and keep the quote marks. Spanish versions of the facts and defenses are next to their English sentences in `js/case.js`.
 
 ---
 
@@ -92,12 +99,13 @@ The opposition text follows the two pro se model briefs: **Template A** for §§
 index.html        the page
 settings.js       ← your settings (edit this)
 css/style.css     look and feel
-js/util.js        dates, deadlines, federal holidays, formatting
+js/util.js        dates, deadlines, federal holidays, formatting, English/Spanish switch
 js/case.js        legal content: notices, deadlines, defenses, facts, documents, instructions
 js/render.js      makes the PDF, Word file, and on-screen previews
 js/app.js         the step-by-step questions
 vendor/           PDF and Word libraries (pdfmake, docx), MIT licensed; see vendor/LICENSES.txt
-examples/         sample output for a fictional person
+examples/         sample output for a fictional person (including Spanish instructions,
+                  and English papers made from Spanish answers)
 ```
 
 No build step, no server, and no outside services. The site works on any static web host.

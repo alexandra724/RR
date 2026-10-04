@@ -10,15 +10,18 @@
 
 window.SITE = {
 
-  // The name shown at the top of the website.
+  // The name shown at the top of the website (in English and in Spanish).
   siteName: "Immigration Fine Helper",
+  siteNameEs: "Ayuda con Multas de Inmigración",
 
-  // One short line under the name.
+  // One short line under the name. Lines ending in "Es" are the Spanish version.
   tagline: "Make your papers to fight a DHS immigration fine — free, private, step by step.",
+  taglineEs: "Prepare sus papeles para pelear una multa de inmigración del DHS: gratis, privado y paso a paso.",
 
   // Who runs this website. Leave "" (empty) to hide.
   // Example: "Provided by the Law Office of Jane Doe"
   providedBy: "",
+  providedByEs: "",   // the same line in Spanish, e.g. "Un servicio de la Oficina Legal de Jane Doe"
 
   // How people can contact you for help. Leave "" (empty) to hide any line.
   contactName: "",
@@ -28,9 +31,11 @@ window.SITE = {
 
   // The date you last checked that this information is still correct.
   lastReviewed: "October 2026",
+  lastReviewedEs: "octubre de 2026",
 
   // Credit line for the model briefs this tool is based on.
   credit: "The papers this tool makes are based on the free model briefs for people without a lawyer published at noimmigrationfines.org by Public Justice, The Legal Aid Society, Free Migration Project, and the NYU Immigrant Rights Clinic. This website is independent and is not run by those organizations.",
+  creditEs: "Los papeles que prepara esta herramienta se basan en los modelos gratuitos para personas sin abogado publicados en noimmigrationfines.org por Public Justice, The Legal Aid Society, Free Migration Project y la Clínica de Derechos de los Inmigrantes de NYU. Este sitio web es independiente y no lo manejan esas organizaciones.",
 
   // ---- Where papers are sent (check these if DHS changes them) ----
 
@@ -62,6 +67,7 @@ window.SITE = {
   links: {
     resources: "https://noimmigrationfines.org/#resources",
     faq: "https://noimmigrationfines.org/#FAQs",
+    faqEs: "https://noimmigrationfines.org/wp-content/uploads/2026/05/Practice-Advisory-Civil-Immigration-Fines-Pro-Se-rev-05-07-2026-Spanish.pdf",
     sampleNotices: "https://noimmigrationfines.org/#sample",
     crsDisputeForm: "https://noimmigrationfines.org/wp-content/uploads/2025/09/6-CRS-Dispute-Form.pdf",
     crsCoverLetter: "https://noimmigrationfines.org/wp-content/uploads/2025/09/7-CRS-Dispute-Cover-Letter_081925.docx",

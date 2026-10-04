@@ -175,7 +175,42 @@
     return pdfSafe(s) !== String(s || "").normalize("NFC");
   }
 
+  /* ---------- Language (English / Spanish) for the screens and instructions ----------
+     The papers that get filed are always in English. */
+
+  var LANG = "en";
+  var MONTHS_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+    "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  var DAYS_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+  function setLang(l) {
+    LANG = l === "es" ? "es" : "en";
+    document.documentElement.lang = LANG;
+  }
+  function lang() { return LANG; }
+
+  // T("English text", "Texto en español") -> the one for the current language.
+  function T(en, es) { return LANG === "es" && es !== undefined && es !== null ? es : en; }
+
+  // Dates on screen and in the instructions follow the chosen language.
+  function fmtDateUI(d) {
+    if (typeof d === "string") d = parseDate(d);
+    if (!d) return "";
+    if (LANG !== "es") return fmtDate(d);
+    return d.getUTCDate() + " de " + MONTHS_ES[d.getUTCMonth()] + " de " + d.getUTCFullYear();
+  }
+  function weekdayUI(d) { return LANG === "es" ? DAYS_ES[d.getUTCDay()] : weekdayName(d); }
+  function monthUI(i) { return LANG === "es" ? MONTHS_ES[i] : MONTHS[i]; }
+
+  function joinListEs(items) {
+    items = items.filter(Boolean);
+    if (items.length <= 1) return items.join("");
+    return items.slice(0, -1).join(", ") + " y " + items[items.length - 1];
+  }
+
   window.U = {
+    setLang: setLang, lang: lang, T: T, fmtDateUI: fmtDateUI, weekdayUI: weekdayUI, monthUI: monthUI,
+    MONTHS_ES: MONTHS_ES, joinListEs: joinListEs,
     MONTHS: MONTHS, parseDate: parseDate, today: today, fmtDate: fmtDate, weekdayName: weekdayName,
     addDays: addDays, addYears: addYears, daysBetween: daysBetween, addBusinessDays: addBusinessDays,
     isBusinessDay: isBusinessDay, federalHolidays: federalHolidays,

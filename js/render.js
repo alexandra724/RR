@@ -253,7 +253,9 @@
     return out;
   }
 
-  function pdfDoc(blocks, footerText, title) {
+  // pageWords: ["Page", "of"] for the English papers; the instructions pass the chosen language.
+  function pdfDoc(blocks, footerText, title, pageWords) {
+    var pw = pageWords || ["Page", "of"];
     return {
       pageSize: "LETTER",
       pageMargins: [72, 72, 72, 64],
@@ -261,14 +263,14 @@
       defaultStyle: { font: "Times", fontSize: 12 },
       content: pdfContent(blocks),
       footer: function (page, pages) {
-        return { text: U.pdfSafe(footerText) + "   ·   Page " + page + " of " + pages, alignment: "center", fontSize: 9, color: "#444444", margin: [0, 24, 0, 0] };
+        return { text: U.pdfSafe(footerText) + "   ·   " + pw[0] + " " + page + " " + pw[1] + " " + pages, alignment: "center", fontSize: 9, color: "#444444", margin: [0, 24, 0, 0] };
       }
     };
   }
 
-  function downloadPdf(blocks, filename, footerText, title) {
+  function downloadPdf(blocks, filename, footerText, title, pageWords) {
     return loadPdf().then(function () {
-      return window.pdfMake.createPdf(pdfDoc(blocks, footerText, title)).getBlob();
+      return window.pdfMake.createPdf(pdfDoc(blocks, footerText, title, pageWords)).getBlob();
     }).then(function (blob) { saveBlob(blob, filename); });
   }
 
@@ -414,7 +416,7 @@
       }
       if (sec.steps) {
         sec.steps.forEach(function (st, i) {
-          blocks.push({ t: "heading", runs: [{ text: "Step " + (i + 1) + ": " + st.title }], size: 12, spaceBefore: 8 });
+          blocks.push({ t: "heading", runs: [{ text: U.T("Step ", "Paso ") + (i + 1) + ": " + st.title }], size: 12, spaceBefore: 8 });
           st.items.forEach(function (it) { blocks.push({ t: "bullet", runs: md(it) }); });
         });
         return;

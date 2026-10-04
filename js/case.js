@@ -15,33 +15,40 @@
 
   /* ---------------- Notice types ---------------- */
 
+  var T = U.T;
+
   var FINES = {
     "274D": {
       short: "INA § 274D",
       plain: "Fine for not leaving after a deportation (removal) order",
+      plainEs: "Multa por no salir después de una orden de deportación (remoción)",
       law: "INA § 274D (willful failure to depart after a final order of removal)",
       template: "A"
     },
     "240B": {
       short: "INA § 240B",
       plain: "Fine for not leaving after voluntary departure",
+      plainEs: "Multa por no salir después de la salida voluntaria",
       law: "INA § 240B (voluntary failure to depart after a voluntary departure order)",
       template: "A"
     },
     "275b": {
       short: "INA § 275(b)",
       plain: "Fine for entering without inspection",
+      plainEs: "Multa por entrar sin inspección",
       law: "INA § 275(b) (apprehended while entering, or attempting to enter, without inspection)",
       template: "B"
     },
     "1815": {
       short: "8 U.S.C. § 1815",
       plain: "Fee for being apprehended between ports of entry",
+      plainEs: "Cargo por ser detenido entre puertos de entrada",
       law: "8 U.S.C. § 1815 (apprehension between ports of entry)",
       template: "B"
     }
   };
 
+  // Names of the notices as printed on them (used in the English papers).
   var FORMS = {
     nvo: { name: "Notice of Violation and Order", tail: "NOTICE OF VIOLATION AND ORDER" },
     i79: { name: "Notice of Intention to Fine", tail: "NOTICE OF INTENTION TO FINE" },
@@ -74,9 +81,10 @@
     return n && n.form && n.form !== "other" && fineOf(n) && FINES[fineOf(n)];
   }
 
+  // Shown on screen and in the instructions, so it follows the chosen language.
   function noticeLabel(n, i) {
     var f = FINES[fineOf(n)];
-    var label = "Notice " + (i + 1) + (f ? ": " + f.short + " — " + f.plain : "");
+    var label = T("Notice ", "Aviso ") + (i + 1) + (f ? ": " + f.short + " — " + T(f.plain, f.plainEs) : "");
     if (n.tracking) label += " (" + U.clean(n.tracking) + ")";
     return label;
   }
@@ -89,21 +97,33 @@
       var inv = U.parseDate(n.invoiceDate);
       if (!inv) return null;
       if (n.invoiceFrom === "cbp") {
-        return { date: U.addDays(inv, 10), rule: "10 calendar days from the invoice date (it must be received by then)", by: "received" };
+        return { date: U.addDays(inv, 10), by: "received",
+          rule: "10 calendar days from the invoice date (it must be received by then)",
+          ruleEs: "10 días calendario desde la fecha de la factura (debe llegar antes de esa fecha)" };
       }
       if (n.invoiceFrom === "crs") {
-        return { date: U.addDays(inv, 30), rule: "30 days from the invoice date (check your bill — a “Past Due Notice” may give 60 days)", by: "received" };
+        return { date: U.addDays(inv, 30), by: "received",
+          rule: "30 days from the invoice date (check your bill — a “Past Due Notice” may give 60 days)",
+          ruleEs: "30 días desde la fecha de la factura (revise su factura: un “Past Due Notice” puede dar 60 días)" };
       }
-      return { date: U.addDays(inv, 30), rule: "30 days from the day you got the first letter from the debt collector", by: "received" };
+      return { date: U.addDays(inv, 30), by: "received",
+        rule: "30 days from the day you got the first letter from the debt collector",
+        ruleEs: "30 días desde el día en que recibió la primera carta del cobrador de deudas" };
     }
     if (!nd) return null;
     if (fineOf(n) === "1815") {
-      return { date: U.addDays(nd, 30), rule: "30 days from the date on the notice", by: "received" };
+      return { date: U.addDays(nd, 30), by: "received",
+        rule: "30 days from the date on the notice",
+        ruleEs: "30 días desde la fecha del aviso" };
     }
     if (nd >= IFR_DATE) {
-      return { date: U.addBusinessDays(nd, 15), rule: "15 business days from the date of the notice (weekends and federal holidays do not count)", by: "postmarked" };
+      return { date: U.addBusinessDays(nd, 15), by: "postmarked",
+        rule: "15 business days from the date of the notice (weekends and federal holidays do not count)",
+        ruleEs: "15 días hábiles desde la fecha del aviso (no cuentan los fines de semana ni los días feriados federales)" };
     }
-    return { date: U.addDays(nd, 30), rule: "30 days from the date of the notice", by: "received" };
+    return { date: U.addDays(nd, 30), by: "received",
+      rule: "30 days from the date of the notice",
+      ruleEs: "30 días desde la fecha del aviso" };
   }
 
   function isLate(n) {
@@ -128,7 +148,8 @@
     return lines.length ? lines : null;
   }
 
-  /* ---------------- Defenses (the optional statements in paragraph 6) ---------------- */
+  /* ---------------- Defenses (the optional statements in paragraph 6) ----------------
+     "text" goes into the English papers. "es" is a Spanish explanation shown on screen. */
 
   function arrivalBeforeJuly4(story) {
     var y = parseInt(story.arrivalYear, 10);
@@ -147,11 +168,17 @@
     var opts = [];
     if (fine === "274D") {
       var od = U.parseDate(n.orderDate);
+      var odOld = !!(od && nd && U.addYears(od, 5) < nd);
       opts.push({
         key: "sol",
         text: "Also, the fine was issued to me more than five years after the removal order, so the fine is barred by the statute of limitations.",
-        why: od ? "Your removal order date (" + U.fmtDate(od) + ") is " + (nd && U.addYears(od, 5) < nd ? "more" : "less") + " than 5 years before the notice." : "Check this only if your removal order was more than 5 years before the fine notice.",
-        auto: !!(od && nd && U.addYears(od, 5) < nd)
+        es: "Además, la multa se me impuso más de cinco años después de la orden de deportación, así que ya pasó el plazo legal (prescripción) para multarme.",
+        why: od
+          ? T("Your removal order date (" + U.fmtDateUI(od) + ") is " + (odOld ? "more" : "less") + " than 5 years before the notice.",
+              "La fecha de su orden de deportación (" + U.fmtDateUI(od) + ") es " + (odOld ? "más" : "menos") + " de 5 años antes del aviso.")
+          : T("Check this only if your removal order was more than 5 years before the fine notice.",
+              "Marque esto solo si su orden de deportación fue más de 5 años antes del aviso de multa."),
+        auto: odOld
       });
     }
     if (fine === "240B") {
@@ -159,7 +186,12 @@
       opts.push({
         key: "sol",
         text: "Also, the fine was issued to me more than five years after the voluntary departure order, so the fine is barred by the statute of limitations.",
-        why: end ? "Based on the dates you gave, your voluntary departure time ended about " + U.fmtDate(end) + "." : "Check this only if your voluntary departure order was more than 5 years before the fine notice.",
+        es: "Además, la multa se me impuso más de cinco años después de la orden de salida voluntaria, así que ya pasó el plazo legal (prescripción) para multarme.",
+        why: end
+          ? T("Based on the dates you gave, your voluntary departure time ended about " + U.fmtDateUI(end) + ".",
+              "Según las fechas que nos dio, su plazo de salida voluntaria terminó alrededor del " + U.fmtDateUI(end) + ".")
+          : T("Check this only if your voluntary departure order was more than 5 years before the fine notice.",
+              "Marque esto solo si su orden de salida voluntaria fue más de 5 años antes del aviso de multa."),
         auto: !!(end && nd && U.addYears(end, 5) < nd)
       });
     }
@@ -167,13 +199,17 @@
       opts.push({
         key: "interior",
         text: "I was fined in the interior of the U.S., not between ports of entry.",
-        why: "Check this if immigration officers did not stop you right at the border.",
+        es: "Me multaron dentro de los Estados Unidos, no entre puertos de entrada (no en la frontera).",
+        why: T("Check this if immigration officers did not stop you right at the border.",
+               "Marque esto si los oficiales de inmigración no lo detuvieron en la frontera misma."),
         auto: interior
       });
       opts.push({
         key: "afterEntry",
         text: "I was fined after I entered the U.S., not at the time I was entering or attempting to enter.",
-        why: "Check this if you got the fine later, not while you were crossing the border.",
+        es: "Me multaron después de entrar a los Estados Unidos, no en el momento en que estaba entrando o intentando entrar.",
+        why: T("Check this if you got the fine later, not while you were crossing the border.",
+               "Marque esto si recibió la multa después, no mientras cruzaba la frontera."),
         auto: interior || s.howEntered === "visa" || s.howEntered === "port"
       });
     }
@@ -181,13 +217,20 @@
       opts.push({
         key: "interior",
         text: "I was fined in the interior of the U.S., not between ports of entry.",
-        why: "Check this if immigration officers did not stop you right at the border.",
+        es: "Me multaron dentro de los Estados Unidos, no entre puertos de entrada (no en la frontera).",
+        why: T("Check this if immigration officers did not stop you right at the border.",
+               "Marque esto si los oficiales de inmigración no lo detuvieron en la frontera misma."),
         auto: interior
       });
       opts.push({
         key: "before0704",
         text: "I entered the U.S. before July 4, 2025, the date that this law was enacted.",
-        why: s.arrivalYear ? "You said you came in " + (s.arrivalMonth ? U.MONTHS[s.arrivalMonth - 1] + " " : "") + s.arrivalYear + "." : "Check this if you came to the U.S. before July 4, 2025.",
+        es: "Entré a los Estados Unidos antes del 4 de julio de 2025, la fecha en que se aprobó esta ley.",
+        why: s.arrivalYear
+          ? T("You said you came in " + (s.arrivalMonth ? U.MONTHS[s.arrivalMonth - 1] + " " : "") + s.arrivalYear + ".",
+              "Usted dijo que llegó en " + (s.arrivalMonth ? U.MONTHS_ES[s.arrivalMonth - 1] + " de " : "") + s.arrivalYear + ".")
+          : T("Check this if you came to the U.S. before July 4, 2025.",
+              "Marque esto si llegó a los Estados Unidos antes del 4 de julio de 2025."),
         auto: arrivalBeforeJuly4(s)
       });
     }
@@ -198,28 +241,62 @@
     return opts;
   }
 
-  /* ---------------- Facts: turning answers into sentences ---------------- */
+  /* ---------------- Facts: turning answers into sentences ----------------
+     Each fact is a pair: { en: sentence for the English papers,
+                            es: the same sentence in Spanish, shown on screen only }. */
+
+  function F(en, es) { return { en: en, es: es }; }
+
+  // Text the person typed is used as-is in both languages.
+  function typed(s) { var t = U.sentence(s); return F(t, t); }
 
   var APPS = [
-    { key: "asylum", label: "Asylum, withholding of removal, or protection under the Convention Against Torture (CAT)", phrase: "I applied for protection in the United States (asylum, withholding of removal, or protection under the Convention Against Torture)." },
-    { key: "tps", label: "TPS (Temporary Protected Status)", phrase: "I applied for Temporary Protected Status (TPS)." },
-    { key: "uvisa", label: "U visa (for victims of crimes)", phrase: "I applied for a U visa." },
-    { key: "tvisa", label: "T visa (for victims of trafficking)", phrase: "I applied for a T visa." },
-    { key: "vawa", label: "VAWA self-petition (for victims of abuse by a U.S. citizen or permanent resident family member)", phrase: "I filed a VAWA self-petition." },
-    { key: "family", label: "A family petition or green card (adjustment of status)", phrase: "I applied for lawful permanent residence based on a family or other immigrant petition." },
-    { key: "sijs", label: "Special Immigrant Juvenile Status (SIJS)", phrase: "I applied for Special Immigrant Juvenile Status." },
-    { key: "daca", label: "DACA", phrase: "I applied for Deferred Action for Childhood Arrivals (DACA)." },
-    { key: "deferred", label: "Deferred action or parole (other than DACA)", phrase: "I applied for deferred action or parole." },
-    { key: "mtr", label: "A motion to reopen my immigration case", phrase: "I filed a motion to reopen my immigration case." },
-    { key: "appeal", label: "An appeal of my immigration case (to the Board of Immigration Appeals or a federal court)", phrase: "I appealed my immigration case." },
-    { key: "stay", label: "A stay of removal (a request to stop my deportation)", phrase: "I asked for a stay of removal." }
+    { key: "asylum",
+      label: "Asylum, withholding of removal, or protection under the Convention Against Torture (CAT)",
+      labelEs: "Asilo, suspensión de la deportación (withholding of removal) o protección bajo la Convención contra la Tortura (CAT)",
+      phrase: "I applied for protection in the United States (asylum, withholding of removal, or protection under the Convention Against Torture).",
+      phraseEs: "Solicité protección en los Estados Unidos (asilo, suspensión de la deportación o protección bajo la Convención contra la Tortura)." },
+    { key: "tps", label: "TPS (Temporary Protected Status)", labelEs: "TPS (Estatus de Protección Temporal)",
+      phrase: "I applied for Temporary Protected Status (TPS).", phraseEs: "Solicité el Estatus de Protección Temporal (TPS)." },
+    { key: "uvisa", label: "U visa (for victims of crimes)", labelEs: "Visa U (para víctimas de delitos)",
+      phrase: "I applied for a U visa.", phraseEs: "Solicité una visa U." },
+    { key: "tvisa", label: "T visa (for victims of trafficking)", labelEs: "Visa T (para víctimas de trata de personas)",
+      phrase: "I applied for a T visa.", phraseEs: "Solicité una visa T." },
+    { key: "vawa",
+      label: "VAWA self-petition (for victims of abuse by a U.S. citizen or permanent resident family member)",
+      labelEs: "Autopetición de VAWA (para víctimas de abuso por un familiar ciudadano o residente permanente)",
+      phrase: "I filed a VAWA self-petition.", phraseEs: "Presenté una autopetición de VAWA." },
+    { key: "family", label: "A family petition or green card (adjustment of status)",
+      labelEs: "Una petición familiar o la residencia (green card / ajuste de estatus)",
+      phrase: "I applied for lawful permanent residence based on a family or other immigrant petition.",
+      phraseEs: "Solicité la residencia permanente con base en una petición familiar u otra petición de inmigrante." },
+    { key: "sijs", label: "Special Immigrant Juvenile Status (SIJS)", labelEs: "Estatus Especial de Inmigrante Juvenil (SIJS)",
+      phrase: "I applied for Special Immigrant Juvenile Status.", phraseEs: "Solicité el Estatus Especial de Inmigrante Juvenil." },
+    { key: "daca", label: "DACA", labelEs: "DACA",
+      phrase: "I applied for Deferred Action for Childhood Arrivals (DACA).", phraseEs: "Solicité la Acción Diferida para los Llegados en la Infancia (DACA)." },
+    { key: "deferred", label: "Deferred action or parole (other than DACA)", labelEs: "Acción diferida o parole (que no sea DACA)",
+      phrase: "I applied for deferred action or parole.", phraseEs: "Solicité acción diferida o parole." },
+    { key: "mtr", label: "A motion to reopen my immigration case", labelEs: "Una moción para reabrir mi caso de inmigración",
+      phrase: "I filed a motion to reopen my immigration case.", phraseEs: "Presenté una moción para reabrir mi caso de inmigración." },
+    { key: "appeal",
+      label: "An appeal of my immigration case (to the Board of Immigration Appeals or a federal court)",
+      labelEs: "Una apelación de mi caso de inmigración (a la Junta de Apelaciones de Inmigración o a una corte federal)",
+      phrase: "I appealed my immigration case.", phraseEs: "Apelé mi caso de inmigración." },
+    { key: "stay", label: "A stay of removal (a request to stop my deportation)",
+      labelEs: "Una suspensión de la deportación (stay of removal: una solicitud para detener mi deportación)",
+      phrase: "I asked for a stay of removal.", phraseEs: "Pedí una suspensión de la deportación (stay of removal)." }
   ];
 
   var STATUS_TEXT = {
-    pending: " It is still pending (waiting for a decision).",
-    approved: " It was approved.",
-    denied: " It was denied."
+    pending: F(" It is still pending (waiting for a decision).", " Todavía está pendiente (esperando una decisión)."),
+    approved: F(" It was approved.", " Fue aprobada."),
+    denied: F(" It was denied.", " Fue negada.")
   };
+
+  function withStatus(base, status) {
+    var st = STATUS_TEXT[status];
+    return F(base.en + (st ? st.en : ""), base.es + (st ? st.es : ""));
+  }
 
   function appSentences(s) {
     var out = [];
@@ -227,10 +304,11 @@
     APPS.forEach(function (a) {
       var v = apps[a.key];
       if (!v || !v.on) return;
-      out.push(a.phrase + (STATUS_TEXT[v.status] || ""));
+      out.push(withStatus(F(a.phrase, a.phraseEs), v.status));
     });
     if (apps.other && apps.other.on && U.clean(apps.other.text)) {
-      out.push("I applied for " + U.clean(apps.other.text).replace(/\.$/, "") + "." + (STATUS_TEXT[apps.other.status] || ""));
+      var what = U.clean(apps.other.text).replace(/\.$/, "");
+      out.push(withStatus(F("I applied for " + what + ".", "Solicité: " + what + "."), apps.other.status));
     }
     return out;
   }
@@ -243,54 +321,71 @@
   function departureFacts(state, n) {
     var s = state.story || {};
     var fine = fineOf(n);
-    var orderWord = fine === "274D" ? "removal order" : "voluntary departure order";
+    var is274 = fine === "274D";
+    var orderEn = is274 ? "removal order" : "voluntary departure order";
+    var orderEs = is274 ? "la orden de deportación" : "la orden de salida voluntaria";
     var out = [];
     if (s.knewOrder === "no") {
       var learned = U.parseDate(s.learnedOrderDate);
-      out.push("I did not know about the " + orderWord + " in my case" + (learned ? " until " + U.fmtDate(learned) : " when it was entered") + ".");
+      out.push(F("I did not know about the " + orderEn + " in my case" + (learned ? " until " + U.fmtDate(learned) : " when it was entered") + ".",
+        "No sabía de " + orderEs + " en mi caso" + (learned ? " hasta el " + U.fmtDateUI(learned) : " cuando se dictó") + "."));
     }
     if (s.minorAtOrder === "yes") {
-      out.push("I was a child (under 18 years old) when the " + orderWord + " was entered.");
+      out.push(F("I was a child (under 18 years old) when the " + orderEn + " was entered.",
+        "Yo era menor de edad (menos de 18 años) cuando se dictó " + orderEs + "."));
     }
     if (s.warned === "no") {
-      out.push(fine === "274D"
-        ? "No one ever warned me, including the immigration judge, that I could be fined for not leaving the United States."
-        : "No one ever warned me, including the immigration judge, that I could be fined if I did not leave by my voluntary departure deadline.");
+      out.push(is274
+        ? F("No one ever warned me, including the immigration judge, that I could be fined for not leaving the United States.",
+            "Nadie me advirtió nunca, ni siquiera el juez de inmigración, que me podían multar por no salir de los Estados Unidos.")
+        : F("No one ever warned me, including the immigration judge, that I could be fined if I did not leave by my voluntary departure deadline.",
+            "Nadie me advirtió nunca, ni siquiera el juez de inmigración, que me podían multar si no salía antes de la fecha límite de mi salida voluntaria."));
     }
-    if (fine === "274D" && s.hadVD === "yes") {
-      out.push("The immigration judge granted me voluntary departure." +
-        (s.warnedDaily === "no" ? " I was never warned that I could face daily fines under INA § 274D." : ""));
+    if (is274 && s.hadVD === "yes") {
+      var noDaily = s.warnedDaily === "no";
+      out.push(F("The immigration judge granted me voluntary departure." + (noDaily ? " I was never warned that I could face daily fines under INA § 274D." : ""),
+        "El juez de inmigración me concedió la salida voluntaria." + (noDaily ? " Nunca me advirtieron que podía recibir multas diarias bajo la sección 274D de la INA." : "")));
     }
-    if (s.supervision === "now") out.push("I am on an Order of Supervision with U.S. Immigration and Customs Enforcement (ICE).");
-    if (s.supervision === "past") out.push("I was on an Order of Supervision with U.S. Immigration and Customs Enforcement (ICE).");
-    if (s.checkins === "all") out.push("I have gone to all of my ICE check-ins.");
-    if (s.checkins === "some") out.push("I have reported to ICE for check-ins.");
+    if (s.supervision === "now") out.push(F("I am on an Order of Supervision with U.S. Immigration and Customs Enforcement (ICE).", "Estoy bajo una Orden de Supervisión de ICE."));
+    if (s.supervision === "past") out.push(F("I was on an Order of Supervision with U.S. Immigration and Customs Enforcement (ICE).", "Estuve bajo una Orden de Supervisión de ICE."));
+    if (s.checkins === "all") out.push(F("I have gone to all of my ICE check-ins.", "He ido a todas mis citas de control (check-ins) con ICE."));
+    if (s.checkins === "some") out.push(F("I have reported to ICE for check-ins.", "Me he presentado ante ICE para mis citas de control (check-ins)."));
     if (s.isap === "now" || s.isap === "past") {
-      var kinds = [];
+      var kEn = [], kEs = [];
       var t = s.isapTypes || {};
-      if (t.ankle) kinds.push("an ankle monitor");
-      if (t.app) kinds.push("a phone app for check-ins");
-      if (t.calls) kinds.push("phone calls");
-      if (t.visits) kinds.push("home visits");
-      out.push((s.isap === "now" ? "I am" : "I was") + " in ICE’s Alternatives to Detention program (ISAP)" +
-        (kinds.length ? ", which " + (s.isap === "now" ? "includes " : "included ") + U.joinList(kinds) : "") + ".");
+      if (t.ankle) { kEn.push("an ankle monitor"); kEs.push("un grillete electrónico"); }
+      if (t.app) { kEn.push("a phone app for check-ins"); kEs.push("una aplicación del teléfono para reportarme"); }
+      if (t.calls) { kEn.push("phone calls"); kEs.push("llamadas telefónicas"); }
+      if (t.visits) { kEn.push("home visits"); kEs.push("visitas a mi casa"); }
+      var now = s.isap === "now";
+      out.push(F((now ? "I am" : "I was") + " in ICE’s Alternatives to Detention program (ISAP)" +
+          (kEn.length ? ", which " + (now ? "includes " : "included ") + U.joinList(kEn) : "") + ".",
+        (now ? "Estoy" : "Estuve") + " en el programa de Alternativas a la Detención de ICE (ISAP)" +
+          (kEs.length ? ", que " + (now ? "incluye " : "incluía ") + U.joinListEs(kEs) : "") + "."));
     }
     if (s.custody === "yes") {
-      out.push("After the " + orderWord + ", I was held in jail, prison, or immigration detention for a period of time, and I could not leave the United States on my own during that time." +
-        (U.clean(s.custodyWhen) ? " This was " + U.clean(s.custodyWhen).replace(/\.$/, "") + "." : ""));
+      var when = U.clean(s.custodyWhen).replace(/\.$/, "");
+      out.push(F("After the " + orderEn + ", I was held in jail, prison, or immigration detention for a period of time, and I could not leave the United States on my own during that time." +
+          (when ? " This was " + when + "." : ""),
+        "Después de " + orderEs + ", estuve en la cárcel, en prisión o en detención de inmigración por un tiempo, y durante ese tiempo no podía salir de los Estados Unidos por mi cuenta." +
+          (when ? " Esto fue: " + when + "." : "")));
     }
     if (s.healthTravel === "yes") {
-      out.push("Serious health problems have made it very hard or impossible for me to travel.");
+      out.push(F("Serious health problems have made it very hard or impossible for me to travel.",
+        "Problemas graves de salud me han hecho muy difícil o imposible viajar."));
     }
     var apps = appSentences(s);
     if (apps.length) {
       out = out.concat(apps);
       if (fine === "240B" && s.vawaCentral === "yes" && s.apps && s.apps.vawa && s.apps.vawa.on) {
-        out.push("Battery or extreme cruelty was at least one central reason why I did not leave by my voluntary departure deadline. Under INA § 240B(d)(2), this penalty does not apply to me.");
+        out.push(F("Battery or extreme cruelty was at least one central reason why I did not leave by my voluntary departure deadline. Under INA § 240B(d)(2), this penalty does not apply to me.",
+          "La violencia o la crueldad extrema fue por lo menos una de las razones principales por las que no salí antes de la fecha límite de mi salida voluntaria. Según la sección 240B(d)(2) de la INA, esta multa no se me aplica."));
       }
-      out.push(fine === "274D"
-        ? "I have been using the legal process available to me. I have not willfully refused to leave the United States."
-        : "I have been using the legal process available to me. I did not voluntarily fail to depart.");
+      out.push(is274
+        ? F("I have been using the legal process available to me. I have not willfully refused to leave the United States.",
+            "He estado usando los procesos legales que tengo a mi alcance. No me he negado a propósito a salir de los Estados Unidos.")
+        : F("I have been using the legal process available to me. I did not voluntarily fail to depart.",
+            "He estado usando los procesos legales que tengo a mi alcance. No dejé de salir por voluntad propia."));
     }
     return out;
   }
@@ -300,83 +395,108 @@
     var out = [];
     var nd = U.parseDate(n.noticeDate) || U.parseDate(n.invoiceDate);
     if (s.arrivalYear) {
-      out.push("I came to the United States in " + (s.arrivalMonth ? U.MONTHS[s.arrivalMonth - 1] + " " : "") + s.arrivalYear + ".");
+      out.push(F("I came to the United States in " + (s.arrivalMonth ? U.MONTHS[s.arrivalMonth - 1] + " " : "") + s.arrivalYear + ".",
+        "Llegué a los Estados Unidos en " + (s.arrivalMonth ? U.MONTHS_ES[s.arrivalMonth - 1] + " de " : "") + s.arrivalYear + "."));
     }
     if (s.howEntered === "visa") {
-      out.push("I entered the United States with a visa, after an immigration officer inspected me at an official port of entry.");
+      out.push(F("I entered the United States with a visa, after an immigration officer inspected me at an official port of entry.",
+        "Entré a los Estados Unidos con una visa, después de que un oficial de inmigración me inspeccionó en un puerto de entrada oficial."));
     } else if (s.howEntered === "port") {
-      out.push("I came to an official port of entry, where an immigration officer inspected me and allowed me to enter the United States.");
+      out.push(F("I came to an official port of entry, where an immigration officer inspected me and allowed me to enter the United States.",
+        "Llegué a un puerto de entrada oficial, donde un oficial de inmigración me inspeccionó y me permitió entrar a los Estados Unidos."));
     }
     var stop = U.parseDate(s.stopDate);
     if (s.whereStopped === "interior") {
-      var place = U.clean(s.stopPlace);
-      out.push("I was not apprehended while entering the United States. Immigration officers first stopped me" +
-        (place ? " in " + place.replace(/\.$/, "") : "") + (stop ? " on or about " + U.fmtDate(stop) : "") +
-        ", inside the United States and away from the border.");
+      var place = U.clean(s.stopPlace).replace(/\.$/, "");
+      out.push(F("I was not apprehended while entering the United States. Immigration officers first stopped me" +
+          (place ? " in " + place : "") + (stop ? " on or about " + U.fmtDate(stop) : "") + ", inside the United States and away from the border.",
+        "No me detuvieron mientras entraba a los Estados Unidos. Los oficiales de inmigración me detuvieron por primera vez" +
+          (place ? " en " + place : "") + (stop ? " alrededor del " + U.fmtDateUI(stop) : "") + ", dentro de los Estados Unidos y lejos de la frontera."));
       if (stop && nd && U.daysBetween(stop, nd) > 60) {
-        out.push("The Notice is dated " + U.fmtDate(nd) + ", " + monthsPhrase(U.daysBetween(stop, nd)) + " after immigration officers first stopped me. I was not given this fine at the time I was apprehended.");
+        var days = U.daysBetween(stop, nd);
+        out.push(F("The Notice is dated " + U.fmtDate(nd) + ", " + monthsPhrase(days, "en") + " after immigration officers first stopped me. I was not given this fine at the time I was apprehended.",
+          "El aviso tiene fecha del " + U.fmtDateUI(nd) + ", " + monthsPhrase(days, "es") + " después de que los oficiales de inmigración me detuvieron por primera vez. No me dieron esta multa en el momento en que me detuvieron."));
       }
     } else if (s.whereStopped === "never") {
-      out.push("Immigration officers never apprehended me while I was entering the United States. I received the Notice while I was living inside the United States.");
+      out.push(F("Immigration officers never apprehended me while I was entering the United States. I received the Notice while I was living inside the United States.",
+        "Los oficiales de inmigración nunca me detuvieron mientras entraba a los Estados Unidos. Recibí el aviso mientras vivía dentro de los Estados Unidos."));
     }
     return out.concat(appSentences(s));
   }
 
-  function monthsPhrase(days) {
+  function monthsPhrase(days, lang) {
     var months = Math.floor(days / 30.4);
-    if (months >= 24) return "more than " + Math.floor(months / 12) + " years";
-    if (months >= 12) return "more than a year";
-    return "more than " + U.plural(months, "month", "months");
+    var es = lang === "es";
+    if (months >= 24) return (es ? "más de " : "more than ") + Math.floor(months / 12) + (es ? " años" : " years");
+    if (months >= 12) return es ? "más de un año" : "more than a year";
+    return es ? "más de " + months + (months === 1 ? " mes" : " meses") : "more than " + U.plural(months, "month", "months");
   }
 
   function lifeFacts(state, n) {
     var s = state.story || {};
     var out = [];
     var t = FINES[fineOf(n)].template;
-    if (t === "A" && s.arrivalYear) out.push("I have lived in the United States since " + s.arrivalYear + ".");
+    if (t === "A" && s.arrivalYear) out.push(F("I have lived in the United States since " + s.arrivalYear + ".", "He vivido en los Estados Unidos desde " + s.arrivalYear + "."));
 
-    var fam = [];
-    if (s.spouse === "yes") fam.push("my spouse or partner");
+    var famEn = [], famEs = [];
+    if (s.spouse === "yes") { famEn.push("my spouse or partner"); famEs.push("mi cónyuge o pareja"); }
     var kids = parseInt(s.children, 10) || 0;
     var usKids = Math.min(parseInt(s.usChildren, 10) || 0, kids);
     if (kids > 0) {
-      var k = kids === 1 ? "my child" : "my " + U.numWord(kids) + " children";
+      var kEn = kids === 1 ? "my child" : "my " + U.numWord(kids) + " children";
+      var kEs = kids === 1 ? "mi hijo o hija" : "mis " + kids + " hijos";
       if (usKids > 0) {
-        k += kids === 1 ? ", who is a U.S. citizen" : " (" + (usKids === kids ? (kids === 2 ? "both" : "all") + " of them are U.S. citizens" : U.numWord(usKids) + " of them " + (usKids === 1 ? "is a U.S. citizen" : "are U.S. citizens")) + ")";
+        if (kids === 1) {
+          kEn += ", who is a U.S. citizen";
+          kEs += ", que es ciudadano(a) estadounidense";
+        } else if (usKids === kids) {
+          kEn += " (" + (kids === 2 ? "both" : "all") + " of them are U.S. citizens)";
+          kEs += " (" + (kids === 2 ? "los dos son" : "todos son") + " ciudadanos estadounidenses)";
+        } else {
+          kEn += " (" + U.numWord(usKids) + " of them " + (usKids === 1 ? "is a U.S. citizen" : "are U.S. citizens") + ")";
+          kEs += " (" + usKids + " de ellos " + (usKids === 1 ? "es ciudadano estadounidense" : "son ciudadanos estadounidenses") + ")";
+        }
       }
-      fam.push(k);
+      famEn.push(kEn); famEs.push(kEs);
     }
     var others = parseInt(s.otherDependents, 10) || 0;
-    if (others > 0) fam.push(others === 1 ? "one other family member" : U.numWord(others) + " other family members");
-    if (fam.length) out.push("My family depends on me. This includes " + U.joinList(fam) + ".");
+    if (others > 0) {
+      famEn.push(others === 1 ? "one other family member" : U.numWord(others) + " other family members");
+      famEs.push(others === 1 ? "otro familiar" : others + " familiares más");
+    }
+    if (famEn.length) out.push(F("My family depends on me. This includes " + U.joinList(famEn) + ".", "Mi familia depende de mí. Esto incluye a " + U.joinListEs(famEs) + "."));
 
     if (s.working === "yes") {
       var job = U.clean(s.job).replace(/\.$/, "");
       var inc = U.parseMoney(s.income);
-      if (job) out.push("I work as " + (/^(a|an|the)\s/i.test(job) ? "" : (/^[aeiou]/i.test(job) ? "an " : "a ")) + job + ".");
-      else out.push("I work.");
-      if (inc !== null) out.push("I earn about " + U.fmtMoney(inc).replace(/\.00$/, "") + " per month.");
+      if (job) out.push(F("I work as " + (/^(a|an|the)\s/i.test(job) ? "" : (/^[aeiou]/i.test(job) ? "an " : "a ")) + job + ".", "Trabajo como: " + job + "."));
+      else out.push(F("I work.", "Trabajo."));
+      if (inc !== null) {
+        var amt = U.fmtMoney(inc).replace(/\.00$/, "");
+        out.push(F("I earn about " + amt + " per month.", "Gano aproximadamente " + amt + " al mes."));
+      }
     } else if (s.working === "no") {
-      out.push("I am not working right now" + (U.clean(s.notWorkingWhy) ? " because " + U.clean(s.notWorkingWhy).replace(/^because\s+/i, "").replace(/\.$/, "") : "") + ".");
+      var why = U.clean(s.notWorkingWhy).replace(/^because\s+/i, "").replace(/^porque\s+/i, "").replace(/\.$/, "");
+      out.push(F("I am not working right now" + (why ? " because " + why : "") + ".", "No estoy trabajando ahora" + (why ? " porque " + why : "") + "."));
     }
-    if (s.leftover === "none") out.push("After I pay for rent, food, and other basic needs, I have no money left over.");
-    if (s.leftover === "little") out.push("After I pay for rent, food, and other basic needs, I have very little money left over.");
-    if (s.savings === "none") out.push("I have no savings.");
-    if (s.savings === "small") out.push("I have less than $1,000 in savings.");
-    if (s.taxes === "yes") out.push("I file taxes in the United States.");
-    if (s.health === "yes" && U.clean(s.healthText)) out.push(U.sentence(s.healthText));
+    if (s.leftover === "none") out.push(F("After I pay for rent, food, and other basic needs, I have no money left over.", "Después de pagar la renta, la comida y otras necesidades básicas, no me queda dinero."));
+    if (s.leftover === "little") out.push(F("After I pay for rent, food, and other basic needs, I have very little money left over.", "Después de pagar la renta, la comida y otras necesidades básicas, me queda muy poco dinero."));
+    if (s.savings === "none") out.push(F("I have no savings.", "No tengo ahorros."));
+    if (s.savings === "small") out.push(F("I have less than $1,000 in savings.", "Tengo menos de $1,000 en ahorros."));
+    if (s.taxes === "yes") out.push(F("I file taxes in the United States.", "Declaro impuestos en los Estados Unidos."));
+    if (s.health === "yes" && U.clean(s.healthText)) out.push(typed(s.healthText));
     return out;
   }
 
   function otherFacts(state) {
     var s = state.story || {};
     var out = [];
-    if (U.clean(s.community)) out.push(U.sentence(s.community));
-    if (U.clean(s.extra)) out.push(U.sentence(s.extra));
+    if (U.clean(s.community)) out.push(typed(s.community));
+    if (U.clean(s.extra)) out.push(typed(s.extra));
     return out;
   }
 
-  // Returns paragraphs (arrays of sentences) of facts for this notice.
+  // Returns paragraphs (arrays of {en, es} facts) for this notice.
   function factParagraphs(state, n) {
     var t = FINES[fineOf(n)].template;
     var paras = [];
@@ -486,7 +606,7 @@
 
     para("I do not have the financial means to pay the Fines, which are incredibly high and pose an unreasonable burden on me and my family.");
 
-    factParagraphs(state, n).forEach(function (sentences) { para(sentences.join(" ")); });
+    factParagraphs(state, n).forEach(function (facts) { para(facts.map(function (f) { return f.en; }).join(" ")); });
 
     para("I understand that I may have defenses against the Fines, including:");
     var letters = "abcdefgh";
@@ -666,9 +786,11 @@
     return { to: destination(n).email, subject: subject, body: lines.join("\n") };
   }
 
-  /* ---------------- Instructions ("what to do next") ---------------- */
+  /* ---------------- Instructions ("what to do next") ----------------
+     Shown on screen and in the instructions PDF, in the chosen language.
+     Text uses **bold** markers; render.js turns them into bold text.
+     Anything the person must copy onto a government form stays in English. */
 
-  // Text uses **bold** markers; render.js turns them into bold text.
   function nextSteps(state, n, i) {
     var S = window.SITE;
     var p = state.person;
@@ -679,117 +801,181 @@
     var late = isLate(n);
     var track = U.clean(n.tracking);
     var translator = state.translator && state.translator.used === "yes";
+    var es = U.lang() === "es";
     var sections = [];
+    var when = dl ? U.weekdayUI(dl.date) + ", " + U.fmtDateUI(dl.date) : "";
 
     var dlText;
-    if (!dl) dlText = "We could not figure out your deadline. Look at your notice and send your papers as soon as possible.";
-    else if (late) dlText = "Your deadline seems to have passed (**" + U.weekdayName(dl.date) + ", " + U.fmtDate(dl.date) + "**). **Send your papers anyway, as soon as you can.** Lawyers who work on these fines recommend it, so that your defenses are on the record.";
-    else dlText = "Your papers must be **" + (dl.by === "postmarked" ? "mailed (postmarked)" : (dest.method === "email" ? "sent" : "received")) + " by " + U.weekdayName(dl.date) + ", " + U.fmtDate(dl.date) + "**. That is " + dl.rule + ". Do not wait until the last day.";
-    sections.push({ title: "Your deadline", items: [dlText, "Deadlines are counted from the date printed on the notice, even if it reached you late. If you are not sure, send your papers right away."], box: true });
+    if (!dl) {
+      dlText = T("We could not figure out your deadline. Look at your notice and send your papers as soon as possible.",
+        "No pudimos calcular su fecha límite. Revise su aviso y envíe sus papeles lo antes posible.");
+    } else if (late) {
+      dlText = T("Your deadline seems to have passed (**" + when + "**). **Send your papers anyway, as soon as you can.** Lawyers who work on these fines recommend it, so that your defenses are on the record.",
+        "Parece que su fecha límite ya pasó (**" + when + "**). **Envíe sus papeles de todas maneras, lo antes posible.** Los abogados que trabajan con estas multas lo recomiendan, para que sus defensas queden por escrito.");
+    } else {
+      var verbEn = dl.by === "postmarked" ? "mailed (postmarked)" : (dest.method === "email" ? "sent" : "received");
+      var verbEs = dl.by === "postmarked" ? "enviados por correo (con matasellos)" : (dest.method === "email" ? "enviados" : "recibidos");
+      dlText = T("Your papers must be **" + verbEn + " by " + when + "**. That is " + dl.rule + ". Do not wait until the last day.",
+        "Sus papeles deben ser **" + verbEs + " a más tardar el " + when + "**. Es decir, " + dl.ruleEs + ". No espere hasta el último día.");
+    }
+    sections.push({ title: T("Your deadline", "Su fecha límite"), box: true, items: [dlText,
+      T("Deadlines are counted from the date printed on the notice, even if it reached you late. If you are not sure, send your papers right away.",
+        "El plazo se cuenta desde la fecha impresa en el aviso, aunque le haya llegado tarde. Si no está seguro, envíe sus papeles de inmediato.")] });
 
     var steps = [];
-    steps.push({ title: "Read your papers carefully", items: [
-      "Check that your name, A-Number, " + trackingLabel(n) + ", dates, and amount are correct.",
-      "Make sure everything is **true**. When you sign, you are promising under **penalty of perjury** (lying is a crime) that it is true.",
-      "If something is wrong, go back in the app, fix it, and download your papers again."
-    ] });
+    steps.push({ title: T("Read your papers carefully", "Lea sus papeles con cuidado"), items: [
+      es ? "Sus papeles están **en inglés**, porque el gobierno los exige en inglés. Si no lee bien el inglés, pida a una persona de confianza que se los lea y se los traduzca **antes de firmar**." : "",
+      T("Check that your name, A-Number, " + trackingLabel(n) + ", dates, and amount are correct.",
+        "Revise que su nombre, su Número A (A-Number), el " + trackingLabel(n) + ", las fechas y la cantidad estén correctos."),
+      T("Make sure everything is **true**. When you sign, you are promising under **penalty of perjury** (lying is a crime) that it is true.",
+        "Asegúrese de que todo sea **verdad**. Al firmar, usted promete **bajo pena de perjurio** (mentir es un delito) que todo es verdad."),
+      T("If something is wrong, go back in the app, fix it, and download your papers again.",
+        "Si algo está mal, regrese en la aplicación, corríjalo y descargue sus papeles otra vez.")
+    ].filter(Boolean) });
+
+    var noPrinter = T("No printer? Try a public library, a print shop (like FedEx Office, Staples, or The UPS Store), or a community organization.",
+      "¿No tiene impresora? Pruebe en una biblioteca pública, una tienda de impresión (como FedEx Office, Staples o The UPS Store) o una organización comunitaria.");
+    var translatorSigns = translator ? T("The person who translated for you must sign and date the **Certificate of Translation** (the last page).",
+      "La persona que le tradujo debe firmar y poner la fecha en el **Certificado de Traducción** (“Certificate of Translation”, la última página).") : "";
 
     if (dest.method === "email") {
-      steps.push({ title: "Print, sign, and scan", items: [
-        "Print all pages. No printer? Try a public library, a print shop (like FedEx Office, Staples, or The UPS Store), or a community organization.",
-        "Sign with blue or black ink: **the cover letter** (page 1, above your name) and **the written defense** (the “Signature” line on its last page). Write the date next to “Today’s date.”",
-        translator ? "The person who translated for you must sign and date the **Certificate of Translation** (the last page)." : "",
-        "Make a PDF of the signed pages with your phone: on iPhone use the **Notes** app (Scan Documents); on Android use **Google Drive** (Scan). Also scan or photograph **every page of your notice**.",
-        "Can’t print? Some free phone apps (such as Adobe Fill & Sign) let you sign a PDF with your finger."
+      steps.push({ title: T("Print, sign, and scan", "Imprima, firme y escanee"), items: [
+        T("Print all pages. ", "Imprima todas las páginas. ") + noPrinter,
+        T("Sign with blue or black ink: **the cover letter** (page 1, above your name) and **the written defense** (the “Signature” line on its last page). Write the date next to “Today’s date.”",
+          "Firme con tinta azul o negra: **la carta de presentación** (página 1, arriba de su nombre) y **la defensa por escrito** (la línea que dice “Signature” en su última página). Escriba la fecha junto a “Today’s date”."),
+        translatorSigns,
+        T("Make a PDF of the signed pages with your phone: on iPhone use the **Notes** app (Scan Documents); on Android use **Google Drive** (Scan). Also scan or photograph **every page of your notice**.",
+          "Haga un PDF de las páginas firmadas con su teléfono: en iPhone use la aplicación **Notas** (Escanear documentos); en Android use **Google Drive** (Escanear). También escanee o tome foto de **todas las páginas de su aviso**."),
+        T("Can’t print? Some free phone apps (such as Adobe Fill & Sign) let you sign a PDF with your finger.",
+          "¿No puede imprimir? Algunas aplicaciones gratuitas (como Adobe Fill & Sign) le permiten firmar un PDF con el dedo.")
       ].filter(Boolean) });
-      steps.push({ title: "Send the email", items: [
-        "Send an email **to: " + dest.email + "**",
-        "Use the subject line and message the app gives you (you can copy them on the last screen of the app).",
-        "**Attach:** (1) your signed papers and (2) the copy of your notice" + (n.form === "invoice" ? " and bill" : "") + ".",
-        "After you send it, check your “Sent” folder. Take a screenshot of the sent email and keep it. Save any reply you get."
+      steps.push({ title: T("Send the email", "Envíe el correo electrónico"), items: [
+        T("Send an email **to: " + dest.email + "**", "Envíe un correo electrónico **a: " + dest.email + "**"),
+        T("Use the subject line and message the app gives you (you can copy them on the last screen of the app).",
+          "Use el asunto y el mensaje que le da la aplicación (puede copiarlos en la última pantalla). Están en inglés porque van dirigidos al gobierno."),
+        T("**Attach:** (1) your signed papers and (2) the copy of your notice" + (n.form === "invoice" ? " and bill" : "") + ".",
+          "**Adjunte:** (1) sus papeles firmados y (2) la copia de su aviso" + (n.form === "invoice" ? " y de la factura" : "") + "."),
+        T("After you send it, check your “Sent” folder. Take a screenshot of the sent email and keep it. Save any reply you get.",
+          "Después de enviarlo, revise su carpeta de “Enviados”. Tome una captura de pantalla del correo enviado y guárdela. Guarde cualquier respuesta que reciba.")
       ] });
     } else {
-      steps.push({ title: "Print and sign", items: [
-        "Print every page, on one side of the paper. No printer? Try a public library, a print shop (like FedEx Office, Staples, or The UPS Store), or a community organization.",
-        "Sign with blue or black ink: **the cover letter** (page 1, above your name) and **the written defense** (the “Signature” line on its last page). Write the date next to “Today’s date” and on the cover letter.",
-        translator ? "The person who translated for you must sign and date the **Certificate of Translation** (the last page)." : ""
+      steps.push({ title: T("Print and sign", "Imprima y firme"), items: [
+        T("Print every page, on one side of the paper. ", "Imprima todas las páginas, de un solo lado del papel. ") + noPrinter,
+        T("Sign with blue or black ink: **the cover letter** (page 1, above your name) and **the written defense** (the “Signature” line on its last page). Write the date next to “Today’s date” and on the cover letter.",
+          "Firme con tinta azul o negra: **la carta de presentación** (página 1, arriba de su nombre) y **la defensa por escrito** (la línea que dice “Signature” en su última página). Escriba la fecha junto a “Today’s date” y en la carta de presentación (“Date”)."),
+        translatorSigns
       ].filter(Boolean) });
       if (n.form === "nvo") {
-        steps.push({ title: "Fill out the “Notice of Appeal” page of your notice", items: [
-          "Your notice has a page called **NOTICE OF APPEAL** (usually the last page, page 4 of 4).",
-          "In the space under “I am filing an appeal of a Notice of Violation and Order for the following reasons,” write: **“I deny the violation. Please see my attached written defense and brief.”**",
-          "Check the box **“I have attached a separate written brief or statement.”** If you are also sending copies of documents (see the next step), check **“I have attached additional documentary evidence.”**",
-          "Sign and date it. Fill in: Printed Name **" + fullName(p) + "**, File Number **" + U.fmtANumber(p.aNumber) + "**, Penalty Tracking Number **" + (track || "(from your notice)") + "**, your mailing address, phone, and email.",
-          "If you do not have this page anymore, still send your papers. Your cover letter says that you are appealing."
+        steps.push({ title: T("Fill out the “Notice of Appeal” page of your notice", "Llene la página “Notice of Appeal” (Aviso de Apelación) de su aviso"), items: [
+          T("Your notice has a page called **NOTICE OF APPEAL** (usually the last page, page 4 of 4).",
+            "Su aviso tiene una página llamada **NOTICE OF APPEAL** (normalmente la última, la página 4 de 4)."),
+          T("In the space under “I am filing an appeal of a Notice of Violation and Order for the following reasons,” write: **“I deny the violation. Please see my attached written defense and brief.”**",
+            "En el espacio debajo de “I am filing an appeal of a Notice of Violation and Order for the following reasons”, escriba **en inglés**, tal como aparece aquí: **“I deny the violation. Please see my attached written defense and brief.”** (Quiere decir: “Niego la violación. Vea mi defensa por escrito adjunta.”)"),
+          T("Check the box **“I have attached a separate written brief or statement.”** If you are also sending copies of documents (see the next step), check **“I have attached additional documentary evidence.”**",
+            "Marque la casilla **“I have attached a separate written brief or statement.”** (adjunté una declaración por escrito). Si también envía copias de documentos (vea el siguiente paso), marque **“I have attached additional documentary evidence.”**"),
+          T("Sign and date it. Fill in: Printed Name **" + fullName(p) + "**, File Number **" + U.fmtANumber(p.aNumber) + "**, Penalty Tracking Number **" + (track || "(from your notice)") + "**, your mailing address, phone, and email.",
+            "Fírmela y escriba la fecha. Llene: Printed Name (nombre) **" + fullName(p) + "**, File Number (Número A) **" + U.fmtANumber(p.aNumber) + "**, Penalty Tracking Number **" + (track || "(el de su aviso)") + "**, y su dirección postal, teléfono y correo electrónico."),
+          T("If you do not have this page anymore, still send your papers. Your cover letter says that you are appealing.",
+            "Si ya no tiene esta página, envíe sus papeles de todas maneras. Su carta de presentación dice que usted está apelando.")
         ] });
       }
-      var proof = ["a copy of **your notice** (all pages)"];
-      if (n.form === "invoice") proof.push("a copy of **the bill or letter** you got");
-      if (s.supervision === "now" || s.supervision === "past") proof.push("your **Order of Supervision**");
-      if (s.checkins === "all" || s.checkins === "some") proof.push("papers showing your **ICE check-ins**");
-      if (s.isap === "now" || s.isap === "past") proof.push("your **ISAP** papers");
-      if (hasApps(s)) proof.push("**receipts or decisions** for your immigration applications");
-      if (s.health === "yes" || s.healthTravel === "yes") proof.push("**letters from doctors** or medical records");
-      if (s.working === "yes" || s.working === "no") proof.push("proof of your income, like **pay stubs or a tax return**");
-      if ((parseInt(s.usChildren, 10) || 0) > 0) proof.push("**birth certificates** of your U.S. citizen children");
-      steps.push({ title: "Add copies of papers that support what you said (optional, but helpful)", items: [
-        "You can include " + U.joinList(proof) + ".",
-        "**Send copies only — never originals.** Keep all your original papers.",
-        "Do not send anything you are not comfortable with the government seeing. If you are unsure, ask a lawyer."
+      var proof = [];
+      var add = function (en, es2) { proof.push(T(en, es2)); };
+      add("a copy of **your notice** (all pages)", "una copia de **su aviso** (todas las páginas)");
+      if (n.form === "invoice") add("a copy of **the bill or letter** you got", "una copia de **la factura o carta** que recibió");
+      if (s.supervision === "now" || s.supervision === "past") add("your **Order of Supervision**", "su **Orden de Supervisión**");
+      if (s.checkins === "all" || s.checkins === "some") add("papers showing your **ICE check-ins**", "papeles que muestren sus **citas de control con ICE**");
+      if (s.isap === "now" || s.isap === "past") add("your **ISAP** papers", "sus papeles de **ISAP**");
+      if (hasApps(s)) add("**receipts or decisions** for your immigration applications", "**recibos o decisiones** de sus solicitudes de inmigración");
+      if (s.health === "yes" || s.healthTravel === "yes") add("**letters from doctors** or medical records", "**cartas de médicos** o expedientes médicos");
+      if (s.working === "yes" || s.working === "no") add("proof of your income, like **pay stubs or a tax return**", "prueba de sus ingresos, como **talones de pago o una declaración de impuestos**");
+      if ((parseInt(s.usChildren, 10) || 0) > 0) add("**birth certificates** of your U.S. citizen children", "**actas de nacimiento** de sus hijos ciudadanos estadounidenses");
+      steps.push({ title: T("Add copies of papers that support what you said (optional, but helpful)", "Agregue copias de papeles que apoyen lo que dijo (opcional, pero ayuda)"), items: [
+        T("You can include " + U.joinList(proof) + ".", "Puede incluir " + U.joinListEs(proof) + "."),
+        T("**Send copies only — never originals.** Keep all your original papers.", "**Envíe solo copias, nunca originales.** Guarde todos sus documentos originales."),
+        T("Do not send anything you are not comfortable with the government seeing. If you are unsure, ask a lawyer.",
+          "No envíe nada que no quiera que vea el gobierno. Si tiene dudas, pregunte a un abogado.")
       ] });
-      steps.push({ title: "Make a copy of everything for yourself", items: [
-        "Before you mail it, copy (or take clear phone photos of) **every page** you are sending, including the signed pages. Keep them in a safe place with your notice."
+      steps.push({ title: T("Make a copy of everything for yourself", "Haga una copia de todo para usted"), items: [
+        T("Before you mail it, copy (or take clear phone photos of) **every page** you are sending, including the signed pages. Keep them in a safe place with your notice.",
+          "Antes de enviarlo, saque copias (o tome fotos claras con su teléfono) de **todas las páginas** que va a enviar, incluyendo las páginas firmadas. Guárdelas en un lugar seguro junto con su aviso.")
       ] });
-      steps.push({ title: "Mail it at the post office", items: [
-        n.form === "invoice" ? "Check your bill or letter for the address where disputes must be sent. If it is different from the address below, go back in the app and change it." : "",
-        "Put everything in a large envelope. Write your address in the top-left corner.",
-        "Mail it **to:** " + (dest.lines.length ? dest.lines.join(", ") : "the address on your letter") + ".",
-        "At the post office counter, ask for **Certified Mail with Return Receipt** (or **Priority Mail Express**). These give you proof of mailing and a tracking number. Use the U.S. Postal Service, not FedEx or UPS.",
-        "Write the Certified Mail number on your copy of the cover letter. **Keep the receipt.**",
-        dl && !late ? "Mail it **by " + U.fmtDate(dl.date) + "**." : "Mail it as soon as possible."
+      var addr = dest.lines.length ? dest.lines.join(", ") : T("the address on your letter", "la dirección que aparece en su carta");
+      steps.push({ title: T("Mail it at the post office", "Envíelo por correo en la oficina postal"), items: [
+        n.form === "invoice" ? T("Check your bill or letter for the address where disputes must be sent. If it is different from the address below, go back in the app and change it.",
+          "Revise en su factura o carta la dirección a donde se deben enviar las disputas. Si es diferente de la dirección de abajo, regrese en la aplicación y cámbiela.") : "",
+        T("Put everything in a large envelope. Write your address in the top-left corner.", "Ponga todo en un sobre grande. Escriba su dirección en la esquina de arriba a la izquierda."),
+        T("Mail it **to:** " + addr + ".", "Envíelo **a:** " + addr + "."),
+        T("At the post office counter, ask for **Certified Mail with Return Receipt** (or **Priority Mail Express**). These give you proof of mailing and a tracking number. Use the U.S. Postal Service, not FedEx or UPS.",
+          "En el mostrador de la oficina postal, pida **“Certified Mail with Return Receipt”** (correo certificado con acuse de recibo) o **“Priority Mail Express”**. Así tendrá prueba del envío y un número de rastreo. Use el Servicio Postal de EE. UU. (USPS), no FedEx ni UPS."),
+        T("Write the Certified Mail number on your copy of the cover letter. **Keep the receipt.**",
+          "Escriba el número de Certified Mail en su copia de la carta de presentación. **Guarde el recibo.**"),
+        dl && !late ? T("Mail it **by " + U.fmtDateUI(dl.date) + "**.", "Envíelo **a más tardar el " + U.fmtDateUI(dl.date) + "**.") : T("Mail it as soon as possible.", "Envíelo lo antes posible.")
       ].filter(Boolean) });
-      steps.push({ title: "Track it and keep your proof", items: [
-        "Track your envelope at " + S.links.uspsTracking + " using your tracking number.",
-        "When the green Return Receipt card comes back, keep it with your copies."
+      steps.push({ title: T("Track it and keep your proof", "Rastree el envío y guarde su prueba"), items: [
+        T("Track your envelope at " + S.links.uspsTracking + " using your tracking number.",
+          "Rastree su sobre en " + S.links.uspsTracking + " con su número de rastreo."),
+        T("When the green Return Receipt card comes back, keep it with your copies.",
+          "Cuando le regrese la tarjeta verde de acuse de recibo (Return Receipt), guárdela con sus copias.")
       ] });
     }
-    sections.push({ title: "Step by step", steps: steps });
+    sections.push({ title: T("Step by step", "Paso a paso"), steps: steps });
 
     var after = [];
     if (n.form !== "invoice" && form === "nvo") {
-      after.push("A supervisory officer (someone who did not make the first decision) will review your appeal. Your notice says they will usually decide within **45 days** after your appeal is filed.");
-      after.push("They may ask you for more information. If they do, you must answer within **15 days**. Open all mail from DHS right away.");
-      after.push("If they agree with you, you will get a paper saying the fine is **reversed, cancelled, or rescinded**. Keep it forever.");
-      after.push("If they do not agree, you will get an **Appeal Decision and Order**, and later a bill. There is no other appeal inside DHS, but you may be able to challenge it in **federal court**. Talk to a lawyer quickly if this happens.");
+      after.push(T("A supervisory officer (someone who did not make the first decision) will review your appeal. Your notice says they will usually decide within **45 days** after your appeal is filed.",
+        "Un oficial supervisor (alguien que no tomó la primera decisión) revisará su apelación. Su aviso dice que normalmente decidirán dentro de **45 días** después de presentada la apelación."));
+      after.push(T("They may ask you for more information. If they do, you must answer within **15 days**. Open all mail from DHS right away.",
+        "Es posible que le pidan más información. Si lo hacen, debe responder dentro de **15 días**. Abra todo el correo del DHS de inmediato."));
+      after.push(T("If they agree with you, you will get a paper saying the fine is **reversed, cancelled, or rescinded**. Keep it forever.",
+        "Si le dan la razón, recibirá un papel que dice que la multa fue **anulada, cancelada o revocada** (“reversed”, “cancelled” o “rescinded”). Guárdelo para siempre."));
+      after.push(T("If they do not agree, you will get an **Appeal Decision and Order**, and later a bill. There is no other appeal inside DHS, but you may be able to challenge it in **federal court**. Talk to a lawyer quickly if this happens.",
+        "Si no le dan la razón, recibirá un documento llamado **“Appeal Decision and Order”** y después una factura. No hay otra apelación dentro del DHS, pero es posible que pueda impugnarla en una **corte federal**. Si esto pasa, hable pronto con un abogado."));
     } else if (n.form !== "invoice" && form === "i79") {
-      after.push("An officer will review your written defense and decide. Open all mail from DHS right away.");
-      after.push("If you lose, you may be able to appeal to the Board of Immigration Appeals (BIA) on **Form EOIR-29** (not EOIR-26). Follow the instructions on the decision and get a lawyer’s help if you can.");
+      after.push(T("An officer will review your written defense and decide. Open all mail from DHS right away.",
+        "Un oficial revisará su defensa por escrito y tomará una decisión. Abra todo el correo del DHS de inmediato."));
+      after.push(T("If you lose, you may be able to appeal to the Board of Immigration Appeals (BIA) on **Form EOIR-29** (not EOIR-26). Follow the instructions on the decision and get a lawyer’s help if you can.",
+        "Si pierde, es posible que pueda apelar a la Junta de Apelaciones de Inmigración (BIA) con el **Formulario EOIR-29** (no el EOIR-26). Siga las instrucciones de la decisión y busque la ayuda de un abogado si puede."));
     } else if (n.form !== "invoice") {
-      after.push("CBP will review your dispute. Check your email often, including your spam or junk folder, and open all mail from DHS right away.");
+      after.push(T("CBP will review your dispute. Check your email often, including your spam or junk folder, and open all mail from DHS right away.",
+        "CBP revisará su disputa. Revise su correo electrónico seguido, también la carpeta de correo no deseado (spam), y abra todo el correo del DHS de inmediato."));
     } else {
-      after.push("Wait for an answer, and open all mail and email right away. Keep paying attention to any new deadlines in letters you get.");
+      after.push(T("Wait for an answer, and open all mail and email right away. Keep paying attention to any new deadlines in letters you get.",
+        "Espere una respuesta y abra todo su correo y correo electrónico de inmediato. Ponga atención a cualquier nueva fecha límite en las cartas que reciba."));
     }
-    sections.push({ title: "What happens next", items: after });
+    sections.push({ title: T("What happens next", "Qué pasa después"), items: after });
 
-    sections.push({ title: "If you get a bill (invoice) later", items: [
-      "**Do not ignore it.** Bills can come from U.S. Customs and Border Protection (CBP), the Department of the Treasury’s Centralized Receivables Service (CRS), or a private debt collector.",
-      "**Bill from CBP:** you can dispute it in writing by email to **" + S.emailCbpInvoice + "** within **10 calendar days** of the invoice date. Include your Penalty Tracking Number and send these same papers again.",
-      "**Bill from CRS (Treasury):** use the free CRS Dispute Form and cover letter: " + S.links.crsDisputeForm + " and " + S.links.crsCoverLetter,
-      "**Letter from a private debt collector:** send them a dispute letter right away (sample: " + S.links.debtCollectorLetter + "). The law says they must pause collection when you dispute the debt.",
-      "This app can also make dispute papers for a bill — start a new notice and choose “A bill (invoice) or past-due notice.”"
+    sections.push({ title: T("If you get a bill (invoice) later", "Si después le llega una factura (cobro)"), items: [
+      T("**Do not ignore it.** Bills can come from U.S. Customs and Border Protection (CBP), the Department of the Treasury’s Centralized Receivables Service (CRS), or a private debt collector.",
+        "**No la ignore.** Las facturas pueden venir de la Oficina de Aduanas y Protección Fronteriza (CBP), del Servicio Centralizado de Cuentas por Cobrar del Departamento del Tesoro (CRS) o de un cobrador de deudas privado."),
+      T("**Bill from CBP:** you can dispute it in writing by email to **" + S.emailCbpInvoice + "** within **10 calendar days** of the invoice date. Include your Penalty Tracking Number and send these same papers again.",
+        "**Factura de CBP:** puede disputarla por escrito, por correo electrónico a **" + S.emailCbpInvoice + "**, dentro de **10 días calendario** desde la fecha de la factura. Incluya su Penalty Tracking Number y envíe otra vez estos mismos papeles."),
+      T("**Bill from CRS (Treasury):** use the free CRS Dispute Form and cover letter: " + S.links.crsDisputeForm + " and " + S.links.crsCoverLetter,
+        "**Factura de CRS (Tesoro):** use el formulario gratuito de disputa de CRS y su carta de presentación: " + S.links.crsDisputeForm + " y " + S.links.crsCoverLetter),
+      T("**Letter from a private debt collector:** send them a dispute letter right away (sample: " + S.links.debtCollectorLetter + "). The law says they must pause collection when you dispute the debt.",
+        "**Carta de un cobrador de deudas privado:** envíele una carta de disputa de inmediato (modelo en inglés: " + S.links.debtCollectorLetter + "). La ley dice que deben pausar el cobro cuando usted disputa la deuda."),
+      T("This app can also make dispute papers for a bill — start a new notice and choose “A bill (invoice) or past-due notice.”",
+        "Esta aplicación también puede preparar papeles para disputar una factura: agregue un aviso nuevo y elija “Una factura (cobro) o aviso de pago vencido”.")
     ] });
 
-    sections.push({ title: "Important to know", items: [
-      "**Should I just pay?** Talk to a lawyer first. DHS may treat payment as admitting that you did something wrong. If you do pay, write **“Payment under protest, with reservation of rights”** on your check or money order.",
-      "**Is it risky to fight the fine?** It is up to DHS to prove the fine is justified. The lawyers at noimmigrationfines.org encourage people to file an opposition and raise their defenses.",
-      "**If you move,** tell ICE (and the immigration court or USCIS, if you have a case there) your new address right away, so you do not miss important letters.",
-      (fineOf(n) === "274D" || fineOf(n) === "240B") ? "**Lawsuit:** A class action, Maria L. v. Noem (D. Mass.), challenges INA § 274D and § 240B fines. Check noimmigrationfines.org for updates." : ""
+    sections.push({ title: T("Important to know", "Es importante saber"), items: [
+      T("**Should I just pay?** Talk to a lawyer first. DHS may treat payment as admitting that you did something wrong. If you do pay, write **“Payment under protest, with reservation of rights”** on your check or money order.",
+        "**¿Debo simplemente pagar?** Hable primero con un abogado. El DHS podría tomar el pago como si usted admitiera que hizo algo malo. Si decide pagar, escriba en inglés en su cheque o giro postal: **“Payment under protest, with reservation of rights”** (pago bajo protesta, con reserva de derechos)."),
+      T("**Is it risky to fight the fine?** It is up to DHS to prove the fine is justified. The lawyers at noimmigrationfines.org encourage people to file an opposition and raise their defenses.",
+        "**¿Es arriesgado pelear la multa?** Le toca al DHS probar que la multa es justa. Los abogados de noimmigrationfines.org animan a las personas a presentar una oposición y a usar sus defensas."),
+      T("**If you move,** tell ICE (and the immigration court or USCIS, if you have a case there) your new address right away, so you do not miss important letters.",
+        "**Si se muda,** avísele de inmediato su nueva dirección a ICE (y a la corte de inmigración o a USCIS, si tiene un caso allí), para que no pierda cartas importantes."),
+      (fineOf(n) === "274D" || fineOf(n) === "240B") ? T("**Lawsuit:** A class action, Maria L. v. Noem (D. Mass.), challenges INA § 274D and § 240B fines. Check noimmigrationfines.org for updates.",
+        "**Demanda:** Una demanda colectiva, Maria L. v. Noem (D. Mass.), impugna las multas de las secciones 274D y 240B de la INA. Busque noticias en noimmigrationfines.org.") : ""
     ].filter(Boolean) });
 
-    var help = ["Questions and answers about these fines: " + S.links.faq, "Find free or low-cost legal help: " + S.links.findLawyer];
+    var help = [
+      T("Questions and answers about these fines: ", "Preguntas y respuestas sobre estas multas: ") + (es ? S.links.faqEs || S.links.faq : S.links.faq),
+      T("Find free or low-cost legal help: ", "Encuentre ayuda legal gratis o de bajo costo: ") + S.links.findLawyer
+    ];
     var contact = [S.contactName, S.contactPhone, S.contactEmail, S.contactWebsite].map(U.clean).filter(Boolean);
-    if (contact.length) help.unshift("Contact us: " + contact.join(" · "));
-    sections.push({ title: "Get help", items: help });
+    if (contact.length) help.unshift(T("Contact us: ", "Contáctenos: ") + contact.join(" · "));
+    sections.push({ title: T("Get help", "Busque ayuda"), items: help });
     return sections;
   }
 
